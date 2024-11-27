@@ -1,6 +1,8 @@
 pub mod context;
 pub mod keygen;
 pub(crate) mod keygen_state_machine;
+pub mod signing;
+pub(crate) mod signing_state_machine;
 pub(crate) mod utils;
 
 const META_SALT: &str = "wsts-protocol";

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::keygen::KeygenError;
+use frost_taproot::VerifyingKey;
 use itertools::Itertools;
 use round_based::SinkExt;
 use std::sync::Arc;
@@ -22,6 +23,7 @@ pub struct WstsState {
     pub poly_commitments: HashMap<u32, PolyCommitment>,
     pub n_signers: usize,
     pub party: Arc<parking_lot::Mutex<Option<PartyState>>>,
+    pub public_key_frost_format: Vec<u8>,
 }
 
 impl WstsState {
@@ -129,6 +131,15 @@ where
         .map_err(|err| KeygenError::MpcError(err.to_string()))?;
 
     let party = signer.save();
+
+    // Convert the WSTS group key into a FROST-compatible format
+    let group_point = party.group_key;
+    let compressed_group_point = group_point.compress();
+    let verifying_key = VerifyingKey::deserialize(compressed_group_point.data).map_err(|e| {
+        KeygenError::MpcError(format!("Failed to convert group key to VerifyingKey: {e}"))
+    })?;
+    let public_key_frost_format = verifying_key.serialize().as_ref().to_vec();
+    state.public_key_frost_format = public_key_frost_format;
     state.party = Arc::new(parking_lot::Mutex::new(Some(party)));
 
     gadget_sdk::info!("Keygen finished computing secret");

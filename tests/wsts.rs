@@ -16,11 +16,12 @@ mod e2e {
         N,
         T,
         KEYGEN_JOB_ID,
-        [InputValue::Uint16(N as _)],
+        [InputValue::Uint16(N as _), InputValue::Uint16(T as _)],
         [],
         KEYGEN_JOB_ID,
         [
             InputValue::Uint16(N as _),
+            InputValue::Uint16(T as _),
             InputValue::Uint64(KEYGEN_CALL_ID.load(std::sync::atomic::Ordering::SeqCst)),
             InputValue::Bytes(BoundedVec(vec![1, 2, 3]))
         ],

@@ -18,7 +18,7 @@ use wsts::v2::Party;
 
 #[job(
     id = 0,
-    params(n),
+    params(n, t),
     event_listener(
         listener = TangleEventListener<WstsContext, JobCalled>,
         pre_processor = services_pre_processor,
@@ -40,8 +40,7 @@ use wsts::v2::Party;
 /// - Failed to get party information
 /// - MPC protocol execution failed
 /// - Serialization of results failed
-pub async fn keygen(n: u16, context: WstsContext) -> Result<ByteBuf, GadgetError> {
-    let t = n - 1;
+pub async fn keygen(n: u16, t: u16, context: WstsContext) -> Result<ByteBuf, GadgetError> {
     // Get configuration and compute deterministic values
     let blueprint_id = context
         .blueprint_id()
