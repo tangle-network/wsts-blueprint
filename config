@@ -1,0 +1,18 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+	ignorecase = true
+	precomposeunicode = true
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+[user]
+	email = tbraun96@gmail.com
+	name = Thomas Braun
+[credential]
+	username = tbraun96
+[remote "origin"]
+	url = https://github.com/tangle-network/wsts-blueprint.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
