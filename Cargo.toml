@@ -24,6 +24,8 @@ thiserror = "2.0.3"
 itertools = "0.13.0"
 rand = "0.8.5"
 parking_lot = { version = "0.12.3", features = ["serde"]}
+p256k1 = "5.4"
+frost-taproot = { git = "https://github.com/webb-tools/tangle.git", branch = "main", default-features = false}
 
 # MPC specific deps
 wsts = "3.0.0"
