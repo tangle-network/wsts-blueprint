@@ -33,6 +33,7 @@ pub struct WstsSigningState {
     pub public_key_frost_format: Vec<u8>,
     pub party: Arc<parking_lot::Mutex<Option<PartyState>>>,
     pub aggregated_signature: Option<Arc<SerializeableSignature>>,
+    pub signature_frost_format: Vec<u8>,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
@@ -97,19 +98,22 @@ pub struct Round2Msg {
 pub async fn wsts_signing_protocol<M, R: CryptoRng + RngCore>(
     network: M,
     keygen_state: &WstsState,
-    threshold: u32,
     message: Vec<u8>,
     rng: &mut R,
 ) -> Result<WstsSigningState, SigningError>
 where
     M: Mpc<ProtocolMessage = Msg>,
 {
-    let lock = keygen_state.party.lock();
-    let state = lock
-        .as_ref()
-        .ok_or_else(|| SigningError::ContextError("Party not found".to_string()))?;
-    let mut signer = Party::load(state);
-    drop(lock);
+    let (mut signer, threshold) = {
+        let lock = keygen_state.party.lock();
+        let state = lock
+            .as_ref()
+            .ok_or_else(|| SigningError::ContextError("Party not found".to_string()))?;
+        let threshold = state.threshold;
+        let signer = Party::load(state);
+        drop(lock);
+        (signer, threshold)
+    };
 
     let n_signers = keygen_state.n_signers;
     let MpcParty { delivery, .. } = network.into_party();
@@ -222,7 +226,7 @@ where
     let public_key_comm = keygen_state
         .poly_commitments
         .iter()
-        .sorted_by(|r1, r2| r1.0.cmp(&r2.0))
+        .sorted_by(|r1, r2| r1.0.cmp(r2.0))
         .map(|r| r.1.clone())
         .collect_vec();
 
@@ -253,6 +257,8 @@ where
     let r = wsts_sig.R.compress();
     signature_bytes[0..33].copy_from_slice(&r.data);
     signature_bytes[33..].copy_from_slice(&wsts_sig.z.to_bytes());
+
+    state.signature_frost_format = signature_bytes.to_vec();
 
     let frost_signature = frost_taproot::Signature::deserialize(signature_bytes)
         .map_err(|_| SigningError::InvalidFrostSignature)?;

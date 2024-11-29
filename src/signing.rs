@@ -10,7 +10,7 @@ use gadget_sdk::{
     job,
     network::round_based_compat::NetworkDeliveryWrapper,
     tangle_subxt::tangle_testnet_runtime::api::services::events::JobCalled,
-    ByteBuf, Error as GadgetError,
+    Error as GadgetError,
 };
 use sp_core::ecdsa::Public;
 
@@ -19,7 +19,7 @@ const SIGNING_SALT: &str = "wsts-signing";
 
 #[job(
     id = 1,
-    params(n, t, keygen_call_id, message),
+    params(keygen_call_id, message),
     event_listener(
         listener = TangleEventListener<WstsContext, JobCalled>,
         pre_processor = services_pre_processor,
@@ -41,12 +41,10 @@ const SIGNING_SALT: &str = "wsts-signing";
 /// - Failed to retrieve the key entry
 /// - Signing process failed
 pub async fn sign(
-    n: u16,
-    t: u16,
     keygen_call_id: u64,
-    message: ByteBuf,
+    message: Vec<u8>,
     context: WstsContext,
-) -> Result<ByteBuf, GadgetError> {
+) -> Result<Vec<u8>, GadgetError> {
     // let message = message.into_bytes();
     // Get configuration and compute deterministic values
     let blueprint_id = context
@@ -57,10 +55,6 @@ pub async fn sign(
         .current_call_id()
         .await
         .map_err(|e| SigningError::ContextError(e.to_string()))?;
-
-    // Compute hash for key retrieval. Must use the call_id of the keygen job
-    let (meta_hash, deterministic_hash) =
-        crate::compute_deterministic_hashes(n, blueprint_id, keygen_call_id, SIGNING_SALT);
 
     // Setup party information
     let (i, operators) = context
@@ -74,14 +68,19 @@ pub async fn sign(
         .map(|(j, (_, ecdsa))| (j as u16, ecdsa))
         .collect();
 
+    let n = parties.len() as u16;
+    let i = i as u16;
+
+    // Compute hash for key retrieval. Must use the call_id of the keygen job
+    let (meta_hash, deterministic_hash) =
+        crate::compute_deterministic_hashes(n, blueprint_id, keygen_call_id, SIGNING_SALT);
+
     // Retrieve the key entry
     let store_key = hex::encode(meta_hash);
     let state = context
         .store
         .get(&store_key)
         .ok_or_else(|| SigningError::ContextError("Key entry not found".to_string()))?;
-
-    let i = i as u16;
 
     gadget_sdk::info!(
         "Starting WSTS Signing for party {i}, n={n}, eid={}",
@@ -99,26 +98,12 @@ pub async fn sign(
 
     let network = round_based::party::MpcParty::connected(network);
 
-    let output = crate::signing_state_machine::wsts_signing_protocol(
-        network,
-        &state,
-        t as _,
-        message.into_vec(),
-        &mut rng,
-    )
-    .await?;
+    let output =
+        crate::signing_state_machine::wsts_signing_protocol(network, &state, message, &mut rng)
+            .await?;
 
-    let signature = &**output
-        .aggregated_signature
-        .as_ref()
-        .expect("Should have a signature");
-
-    let signature = ByteBuf::from(
-        bincode::serialize(signature)
-            .map_err(|e| SigningError::SerializationError(e.to_string()))?,
-    );
-
-    Ok(signature)
+    let signature_frost_format = output.signature_frost_format.clone();
+    Ok(signature_frost_format)
 }
 
 #[derive(Debug, thiserror::Error)]
