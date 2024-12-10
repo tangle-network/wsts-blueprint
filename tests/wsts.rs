@@ -28,7 +28,7 @@ mod e2e {
             run_test_blueprint_manager,
         )
             .await
-            .execute_with_async((|client, handles, blueprint| async move {
+            .execute_with_async(|client, handles, blueprint| async move {
                 let keypair = handles[0].sr25519_id().clone();
                 let service = &blueprint.services[KEYGEN_JOB_ID as usize];
 
@@ -38,13 +38,17 @@ mod e2e {
                 );
 
                 let job_args = vec![(InputValue::Uint16(T as u16))];
-
+                let call_id = get_next_call_id(client)
+                    .await
+                    .expect("Failed to get next job id")
+                    .saturating_sub(1);
                 let job = submit_job(
                     client,
                     &keypair,
                     service_id,
                     Job::from(0),
                     job_args,
+                    call_id,
                 )
                     .await
                     .expect("Failed to submit job");
@@ -92,12 +96,17 @@ mod e2e {
                 ]))
                 )];
 
+                let call_id = get_next_call_id(client)
+                    .await
+                    .expect("Failed to get next job id")
+                    .saturating_sub(1);
                 let job = submit_job(
                     client,
                     &keypair,
                     service_id,
                     Job::from(0),
                     job_args,
+                    call_id,
                 )
                     .await
                     .expect("Failed to submit job");
@@ -123,7 +132,7 @@ mod e2e {
                 } else {
                     gadget_sdk::info!( "No expected outputs specified, skipping signing verification" );
                 }
-            }))
+            })
             .await
     }
 }
