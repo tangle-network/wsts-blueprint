@@ -10,7 +10,7 @@ use gadget_sdk::{
     job,
     network::round_based_compat::NetworkDeliveryWrapper,
     tangle_subxt::tangle_testnet_runtime::api::services::events::JobCalled,
-    ByteBuf, Error as GadgetError,
+    Error as GadgetError,
 };
 use sp_core::ecdsa::Public;
 use std::collections::BTreeMap;
@@ -18,7 +18,7 @@ use wsts::v2::Party;
 
 #[job(
     id = 0,
-    params(n),
+    params(t),
     event_listener(
         listener = TangleEventListener<WstsContext, JobCalled>,
         pre_processor = services_pre_processor,
@@ -28,7 +28,7 @@ use wsts::v2::Party;
 /// Runs a distributed key generation (DKG) process using the WSTS protocol
 ///
 /// # Arguments
-/// * `n` - Number of parties participating in the DKG
+/// * `t` - The threshold for the DKG
 /// * `context` - The DFNS context containing network and storage configuration
 ///
 /// # Returns
@@ -40,8 +40,7 @@ use wsts::v2::Party;
 /// - Failed to get party information
 /// - MPC protocol execution failed
 /// - Serialization of results failed
-pub async fn keygen(n: u16, context: WstsContext) -> Result<ByteBuf, GadgetError> {
-    let t = n - 1;
+pub async fn keygen(t: u16, context: WstsContext) -> Result<Vec<u8>, GadgetError> {
     // Get configuration and compute deterministic values
     let blueprint_id = context
         .blueprint_id()
@@ -50,9 +49,6 @@ pub async fn keygen(n: u16, context: WstsContext) -> Result<ByteBuf, GadgetError
         .current_call_id()
         .await
         .map_err(|e| KeygenError::ContextError(e.to_string()))?;
-
-    let (meta_hash, deterministic_hash) =
-        crate::compute_deterministic_hashes(n, blueprint_id, call_id, KEYGEN_SALT);
 
     // Setup party information
     let (i, operators) = context
@@ -66,7 +62,12 @@ pub async fn keygen(n: u16, context: WstsContext) -> Result<ByteBuf, GadgetError
         .map(|(j, (_, ecdsa))| (j as u16, ecdsa))
         .collect();
 
+    let n = parties.len() as u16;
     let i = i as u16;
+    let k = n;
+
+    let (meta_hash, deterministic_hash) =
+        crate::compute_deterministic_hashes(n, blueprint_id, call_id, KEYGEN_SALT);
 
     gadget_sdk::info!(
         "Starting WSTS Keygen for party {i}, n={n}, eid={}",
@@ -80,19 +81,19 @@ pub async fn keygen(n: u16, context: WstsContext) -> Result<ByteBuf, GadgetError
         parties.clone(),
     );
 
-    let k = n;
-    let state = protocol(n as _, i as _, t as _, k as _, network).await?;
+    let state = protocol(n as _, i as _, k as _, t as _, network).await?;
 
     gadget_sdk::info!(
         "Ending WSTS Keygen for party {i}, n={n}, eid={}",
         hex::encode(deterministic_hash)
     );
 
+    let public_key_frost_format = state.public_key_frost_format.clone();
     // Store the results
     let store_key = hex::encode(meta_hash);
     context.store.set(&store_key, state);
 
-    Ok(ByteBuf::new())
+    Ok(public_key_frost_format)
 }
 
 /// Configuration constants for the WSTS keygen process
