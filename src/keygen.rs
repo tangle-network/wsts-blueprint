@@ -81,7 +81,7 @@ pub async fn keygen(t: u16, context: WstsContext) -> Result<Vec<u8>, GadgetError
         parties.clone(),
     );
 
-    let state = protocol(n as _, i as _, t as _, k as _, network).await?;
+    let state = protocol(n as _, i as _, k as _, t as _, network).await?;
 
     gadget_sdk::info!(
         "Ending WSTS Keygen for party {i}, n={n}, eid={}",

@@ -2,7 +2,7 @@ use gadget_sdk::Error;
 pub fn validate_parameters(n: u32, k: u32, t: u32) -> Result<(), Error> {
     if k % n != 0 {
         return Err(Error::Job {
-            reason: "K % N != 0".to_string(),
+            reason: format!("K({k} % N({n} != 0"),
         });
     }
 
