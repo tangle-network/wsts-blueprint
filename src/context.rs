@@ -20,6 +20,8 @@ const NETWORK_PROTOCOL: &str = "/wsts/frost/1.0.0";
 pub struct WstsContext {
     #[config]
     pub config: sdk::config::StdGadgetConfiguration,
+    #[call_id]
+    pub call_id: Option<u64>,
     pub network_backend: Arc<NetworkMultiplexer>,
     pub store: Arc<LocalDatabase<WstsState>>,
     pub identity: ecdsa::Pair,
@@ -47,6 +49,7 @@ impl WstsContext {
 
         Ok(Self {
             store,
+            call_id: None,
             identity,
             config,
             network_backend: Arc::new(NetworkMultiplexer::new(gossip_handle)),

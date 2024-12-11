@@ -18,9 +18,11 @@ async fn main() {
 
     let tangle_config = TangleConfig::default();
     let keygen = wsts_blueprint::keygen::KeygenEventHandler::new(&env, context.clone()).await?;
+    let signing = wsts_blueprint::signing::SignEventHandler::new(&env, context.clone()).await?;
 
     BlueprintRunner::new(tangle_config, env.clone())
         .job(keygen)
+        .job(signing)
         .run()
         .await?;
 
