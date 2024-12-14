@@ -32,6 +32,7 @@ wsts = "3.0.0"
 
 [build-dependencies]
 blueprint-metadata = { git = "https://github.com/tangle-network/gadget/" }
+blueprint-build-utils = { git = "https://github.com/tangle-network/gadget/" }
 
 [dev-dependencies]
 blueprint-test-utils = { git = "https://github.com/tangle-network/gadget/" }
