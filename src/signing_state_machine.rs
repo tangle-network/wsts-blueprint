@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use crate::keygen_state_machine::{HasRecipient, WstsState};
 use crate::signing::SigningError;
-use frost_taproot::{Ciphersuite, Secp256K1Taproot, VerifyingKey};
+use frost_secp256k1_tr::{Ciphersuite, Secp256K1Sha256TR, VerifyingKey};
 use itertools::Itertools;
 use p256k1::point::Point;
 use p256k1::scalar::Scalar;
@@ -260,22 +260,18 @@ where
 
     state.signature_frost_format = signature_bytes.to_vec();
 
-    let frost_signature = frost_taproot::Signature::deserialize(signature_bytes)
+    let frost_signature = frost_secp256k1_tr::Signature::deserialize(&signature_bytes)
         .map_err(|_| SigningError::InvalidFrostSignature)?;
 
     let frost_verifying_key =
         VerifyingKey::deserialize(state.public_key_frost_format.clone().try_into().unwrap())
             .map_err(|_| SigningError::InvalidFrostVerifyingKey)?;
 
-    if !frost_signature.is_valid() {
-        return Err(SigningError::InvalidFrostSignature);
-    }
-
     frost_verifying_key
         .verify(&message, &frost_signature)
         .map_err(|_| SigningError::InvalidFrostVerification)?;
 
-    Secp256K1Taproot::verify_signature(&message, &frost_signature, &frost_verifying_key)
+    Secp256K1Sha256TR::verify_signature(&message, &frost_signature, &frost_verifying_key)
         .map_err(|_| SigningError::InvalidFrostVerification)?;
 
     state.party = Arc::new(parking_lot::Mutex::new(Some(signer.save())));

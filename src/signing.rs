@@ -1,18 +1,14 @@
-use std::collections::BTreeMap;
-
 use crate::context::WstsContext;
-use gadget_sdk::contexts::MPCContext;
-use gadget_sdk::{
-    event_listener::tangle::{
-        jobs::{services_post_processor, services_pre_processor},
-        TangleEventListener,
-    },
-    job,
-    network::round_based_compat::NetworkDeliveryWrapper,
-    tangle_subxt::tangle_testnet_runtime::api::services::events::JobCalled,
-    Error as GadgetError,
-};
-use sp_core::ecdsa::Public;
+use gadget_crypto::k256::K256VerifyingKey;
+use gadget_crypto::KeyEncoding;
+use gadget_event_listeners::tangle::events::TangleEventListener;
+use gadget_event_listeners::tangle::services::{services_post_processor, services_pre_processor};
+use gadget_macros::ext::clients::GadgetServicesClient;
+use gadget_macros::ext::contexts::tangle::TangleClientContext;
+use gadget_macros::ext::tangle::tangle_subxt::tangle_testnet_runtime::api::services::events::JobCalled;
+use gadget_macros::job;
+use gadget_networking::round_based_compat::NetworkDeliveryWrapper;
+use std::collections::BTreeMap;
 
 /// Configuration constants for the WSTS signing process
 const SIGNING_SALT: &str = "wsts-signing";
@@ -44,28 +40,34 @@ pub async fn sign(
     keygen_call_id: u64,
     message: Vec<u8>,
     context: WstsContext,
-) -> Result<Vec<u8>, GadgetError> {
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     // let message = message.into_bytes();
     // Get configuration and compute deterministic values
-    let blueprint_id = context
+    let client = context.tangle_client().await?;
+    let blueprint_id = client
         .blueprint_id()
-        .map_err(|e| SigningError::ContextError(e.to_string()))?;
-
-    let call_id = context
-        .current_call_id()
         .await
         .map_err(|e| SigningError::ContextError(e.to_string()))?;
 
+    let call_id = context
+        .call_id
+        .ok_or_else(|| SigningError::ContextError("call_id not set".into()))?;
+
     // Setup party information
-    let (i, operators) = context
+    let (i, operators) = client
         .get_party_index_and_operators()
         .await
         .map_err(|e| SigningError::ContextError(e.to_string()))?;
 
-    let parties: BTreeMap<u16, Public> = operators
+    let parties: BTreeMap<u16, _> = operators
         .into_iter()
         .enumerate()
-        .map(|(j, (_, ecdsa))| (j as u16, ecdsa))
+        .map(|(j, (_, ecdsa))| {
+            (
+                j as u16,
+                K256VerifyingKey::from_bytes(&ecdsa.0).expect("33 byte compressed ECDSA key"),
+            )
+        })
         .collect();
 
     let n = parties.len() as u16;
@@ -73,7 +75,7 @@ pub async fn sign(
 
     // Compute hash for key retrieval. Must use the call_id of the keygen job
     let (meta_hash, deterministic_hash) =
-        crate::compute_deterministic_hashes(n, blueprint_id, keygen_call_id, SIGNING_SALT);
+        crate::compute_execution_hashes(n, blueprint_id, keygen_call_id, SIGNING_SALT);
 
     // Retrieve the key entry
     let store_key = hex::encode(meta_hash);
@@ -82,7 +84,7 @@ pub async fn sign(
         .get(&store_key)
         .ok_or_else(|| SigningError::ContextError("Key entry not found".to_string()))?;
 
-    gadget_sdk::info!(
+    gadget_logging::info!(
         "Starting WSTS Signing for party {i}, n={n}, eid={}",
         hex::encode(deterministic_hash)
     );
@@ -134,10 +136,4 @@ pub enum SigningError {
 
     #[error("Invalid FROST verification")]
     InvalidFrostVerification,
-}
-
-impl From<SigningError> for gadget_sdk::Error {
-    fn from(err: SigningError) -> Self {
-        gadget_sdk::Error::Other(err.to_string())
-    }
 }

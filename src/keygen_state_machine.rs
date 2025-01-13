@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::keygen::KeygenError;
-use frost_taproot::VerifyingKey;
+use frost_secp256k1_tr::VerifyingKey;
 use itertools::Itertools;
 use round_based::SinkExt;
 use std::sync::Arc;
@@ -99,7 +99,7 @@ where
         state.poly_commitments.insert(party_id, msg.poly_commitment);
     }
 
-    gadget_sdk::trace!(
+    gadget_logging::trace!(
         "Received shares: {:?}",
         state.shares.keys().collect::<Vec<_>>()
     );
@@ -135,14 +135,14 @@ where
     // Convert the WSTS group key into a FROST-compatible format
     let group_point = party.group_key;
     let compressed_group_point = group_point.compress();
-    let verifying_key = VerifyingKey::deserialize(compressed_group_point.data).map_err(|e| {
+    let verifying_key = VerifyingKey::deserialize(&compressed_group_point.data).map_err(|e| {
         KeygenError::MpcError(format!("Failed to convert group key to VerifyingKey: {e}"))
     })?;
     let public_key_frost_format = verifying_key.serialize().as_ref().to_vec();
     state.public_key_frost_format = public_key_frost_format;
     state.party = Arc::new(parking_lot::Mutex::new(Some(party)));
 
-    gadget_sdk::info!("Keygen finished computing secret");
+    gadget_logging::info!("Keygen finished computing secret");
 
     Ok(state)
 }

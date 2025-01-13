@@ -6,37 +6,45 @@ edition = "2021"
 
 [package.metadata.blueprint]
 manager = { Evm = "WstsBlueprint" }
+master_revision = "Latest"
 
 [dependencies]
-gadget-sdk = { git = "https://github.com/tangle-network/gadget/", features = ["std"] }
-#gadget-sdk = { path = "../gadget/sdk", features = ["std"] }
+# Gadget dependencies
+gadget-event-listeners = { git = "https://github.com/tangle-network/gadget-workspace/", features = ["std", "tangle"] }
+gadget-macros = { git = "https://github.com/tangle-network/gadget-workspace/", features = ["tangle", "std"] }
+gadget-crypto = { git = "https://github.com/tangle-network/gadget-workspace/", features = ["default"] }
+gadget-crypto-tangle-pair-signer = { git = "https://github.com/tangle-network/gadget-workspace/", features = ["evm"] }
+gadget-config = { git = "https://github.com/tangle-network/gadget-workspace/", features = ["std"] }
+gadget-logging = { git = "https://github.com/tangle-network/gadget-workspace/", features = ["std"] }
+gadget-runners = { git = "https://github.com/tangle-network/gadget-workspace/", features = ["tangle"] }
+gadget-store-local-database = { git = "https://github.com/tangle-network/gadget-workspace/", features = ["std"] }
+gadget-networking = { git = "https://github.com/tangle-network/gadget-workspace/", features = ["std", "round-based-compat"] }
 color-eyre = { version = "0.6", features = ["tracing-error", "color-spantrace"] }
 tokio = { version = "1.40", default-features = false, features = ["full"] }
 hex = { version = "0.4.3", default-features = false }
 k256 = { version = "0.13.3", default-features = false }
-bincode = "1.3.3"
-sp-core = { version = "31.0.0", default-features = false }
-rand_chacha = "0.3.1"
+sp-core = { version = "31.0.0" }
 serde = { version = "1.0.214", features = ["derive"] }
-round-based = { version = "0.3.2", features = ["runtime-tokio"] }
-tracing-subscriber = "0.3.18"
+round-based = { version = "0.3.2", features = ["runtime-tokio", "derive"] }
 thiserror = "2.0.3"
 itertools = "0.13.0"
 rand = "0.8.5"
 parking_lot = { version = "0.12.3", features = ["serde"]}
-p256k1 = "5.4"
-frost-taproot = { git = "https://github.com/webb-tools/tangle.git", branch = "main", default-features = false}
+p256k1 = "^5"
+frost-secp256k1-tr = { git = "https://github.com/webb-tools/tangle.git", branch = "main", default-features = false}
 
 # MPC specific deps
 wsts = "3.0.0"
 
 [build-dependencies]
-blueprint-metadata = { git = "https://github.com/tangle-network/gadget/" }
-blueprint-build-utils = { git = "https://github.com/tangle-network/gadget/" }
+blueprint-metadata = { git = "https://github.com/tangle-network/gadget-workspace/" }
+blueprint-build-utils = { git = "https://github.com/tangle-network/gadget-workspace/" }
 
 [dev-dependencies]
-blueprint-test-utils = { git = "https://github.com/tangle-network/gadget/" }
-cargo-tangle = { git = "https://github.com/tangle-network/gadget/" }
+gadget-client-tangle = { git = "https://github.com/tangle-network/gadget-workspace/" }
+gadget-tangle-testing-utils = { git = "https://github.com/tangle-network/gadget-workspace/" }
+gadget-testing-utils = { git = "https://github.com/tangle-network/gadget-workspace/", features = ["tangle"] }
+tempfile = "3.15.0"
 
 [features]
 default = ["std"]

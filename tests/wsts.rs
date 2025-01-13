@@ -1,11 +1,10 @@
 #[cfg(test)]
 mod e2e {
-    use ::blueprint_test_utils::test_ext::new_test_ext_blueprint_manager;
-    pub use ::blueprint_test_utils::{
-        run_test_blueprint_manager, setup_log, submit_job, wait_for_completion_of_tangle_job, Job,
-    };
-    use blueprint_test_utils::tangle::NodeConfig;
-    use blueprint_test_utils::*;
+    use gadget_logging::setup_log;
+    use gadget_macros::ext::blueprint_serde::{BoundedVec, Field as InputValue};
+    use gadget_macros::ext::tangle::tangle_subxt::tangle_testnet_runtime::api::services::calls::types::call::Job;
+    use gadget_tangle_testing_utils::node::transactions::{get_next_call_id, submit_job, wait_for_completion_of_tangle_job};
+    use gadget_testing_utils::tangle::node::NodeConfig;
     use wsts_blueprint::keygen::KEYGEN_JOB_ID;
     use wsts_blueprint::signing::SIGN_JOB_ID;
 
@@ -16,7 +15,7 @@ mod e2e {
     async fn test_blueprint() {
         setup_log();
 
-        let tmp_dir = ::blueprint_test_utils::tempfile::TempDir::new().unwrap();
+        let tmp_dir = tempfile::TempDir::new().unwrap();
         let tmp_dir_path = format!("{}", tmp_dir.path().display());
 
         new_test_ext_blueprint_manager::<N, 1, String, _, _>(
@@ -30,7 +29,7 @@ mod e2e {
                 let service = &blueprint.services[KEYGEN_JOB_ID as usize];
 
                 let service_id = service.id;
-                gadget_sdk::info!(
+                gadget_logging::info!(
             "Submitting KEYGEN job {KEYGEN_JOB_ID} with service ID {service_id}",
         );
 
@@ -52,7 +51,7 @@ mod e2e {
 
                 let keygen_call_id = job.call_id;
 
-                gadget_sdk::info!(
+                gadget_logging::info!(
             "Submitted KEYGEN job {} with service ID {service_id} has call id {keygen_call_id}",
             KEYGEN_JOB_ID
         );
@@ -80,14 +79,14 @@ mod e2e {
                         assert_eq!(result, expected);
                     }
                 } else {
-                    gadget_sdk::info!("No expected outputs specified, skipping keygen verification");
+                    gadget_logging::info!("No expected outputs specified, skipping keygen verification");
                 }
 
-                gadget_sdk::info!("Keygen job completed successfully! Moving on to signing ...");
+                gadget_logging::info!("Keygen job completed successfully! Moving on to signing ...");
 
                 let service = &blueprint.services[0];
                 let service_id = service.id;
-                gadget_sdk::info!(
+                gadget_logging::info!(
                     "Submitting SIGNING job {} with service ID {service_id}",
                     SIGN_JOB_ID
                 );
@@ -113,7 +112,7 @@ mod e2e {
                     .expect("Failed to submit job");
 
                 let signing_call_id = job.call_id;
-                gadget_sdk::info!(
+                gadget_logging::info!(
             "Submitted SIGNING job {SIGN_JOB_ID} with service ID {service_id} has call id {signing_call_id}",
         );
 
@@ -137,7 +136,7 @@ mod e2e {
                         assert_eq!(result, expected);
                     }
                 } else {
-                    gadget_sdk::info!("No expected outputs specified, skipping signing verification");
+                    gadget_logging::info!("No expected outputs specified, skipping signing verification");
                 }
             })
             .await

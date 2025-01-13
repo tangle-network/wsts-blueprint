@@ -1,11 +1,9 @@
 use color_eyre::Result;
-use gadget_sdk::info;
-use gadget_sdk::runners::tangle::TangleConfig;
-use gadget_sdk::runners::BlueprintRunner;
-use gadget_sdk::subxt::ext::sp_core::Pair;
+use gadget_logging::info;
+use gadget_runners::core::runner::BlueprintRunner;
 use wsts_blueprint::context::WstsContext;
 
-#[gadget_sdk::main(env)]
+#[gadget_macros::main(env)]
 async fn main() {
     let context = WstsContext::new(env.clone())?;
 
