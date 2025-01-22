@@ -1,11 +1,14 @@
 use crate::keygen_state_machine::WstsState;
+use blueprint_sdk::config::StdGadgetConfiguration;
+use blueprint_sdk::macros as gadget_macros;
+use blueprint_sdk::macros::contexts::{
+    KeystoreContext, P2pContext, ServicesContext, TangleClientContext,
+};
+use blueprint_sdk::networking::networking::NetworkMultiplexer;
+use blueprint_sdk::networking::setup::start_p2p_network;
+use blueprint_sdk::networking::GossipMsgKeyPair;
+use blueprint_sdk::stores::local_database::LocalDatabase;
 use color_eyre::eyre;
-use gadget_config::StdGadgetConfiguration;
-use gadget_crypto_tangle_pair_signer::sp_core::ecdsa;
-use gadget_macros::contexts::{KeystoreContext, P2pContext, ServicesContext, TangleClientContext};
-use gadget_networking::networking::NetworkMultiplexer;
-use gadget_networking::setup::start_p2p_network;
-use gadget_store_local_database::LocalDatabase;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -23,7 +26,7 @@ pub struct WstsContext {
     pub call_id: Option<u64>,
     pub network_backend: Arc<NetworkMultiplexer>,
     pub store: Arc<LocalDatabase<WstsState>>,
-    pub identity: ecdsa::Pair,
+    pub identity: GossipMsgKeyPair,
 }
 
 // Core context management implementation
@@ -39,7 +42,7 @@ impl WstsContext {
             .libp2p_network_config(NETWORK_PROTOCOL)
             .map_err(|err| eyre::eyre!("Failed to create network configuration: {err}"))?;
 
-        let identity = network_config.ecdsa_key.clone();
+        let identity = network_config.secret_key.clone();
         let gossip_handle = start_p2p_network(network_config)
             .map_err(|err| eyre::eyre!("Failed to start the P2P network: {err}"))?;
 

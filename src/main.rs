@@ -1,15 +1,18 @@
+use blueprint_sdk::logging::info;
+use blueprint_sdk::macros;
+use blueprint_sdk::runners::core::runner::BlueprintRunner;
+use blueprint_sdk::runners::tangle::tangle::TangleConfig;
 use color_eyre::Result;
-use gadget_logging::info;
-use gadget_runners::core::runner::BlueprintRunner;
 use wsts_blueprint::context::WstsContext;
+use wsts_blueprint::crypto::KeyEncoding;
 
-#[gadget_macros::main(env)]
+#[macros::main(env)]
 async fn main() {
     let context = WstsContext::new(env.clone())?;
 
     info!(
         "Starting the Blueprint Runner for {} ...",
-        hex::encode(context.identity.public().as_ref())
+        hex::encode(context.identity.public().to_bytes())
     );
 
     info!("~~~ Executing the WSTS blueprint ~~~");

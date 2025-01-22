@@ -5,6 +5,8 @@ pub mod signing;
 pub(crate) mod signing_state_machine;
 pub(crate) mod utils;
 
+pub use blueprint_sdk::*;
+
 const META_SALT: &str = "wsts-protocol";
 
 #[macro_export]

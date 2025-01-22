@@ -1,16 +1,18 @@
 use crate::keygen_state_machine;
 use crate::utils::validate_parameters;
 use crate::{context::WstsContext, keygen_state_machine::WstsState};
-use gadget_crypto::k256::K256VerifyingKey;
-use gadget_crypto::KeyEncoding;
-use gadget_event_listeners::tangle::events::TangleEventListener;
-use gadget_event_listeners::tangle::services::{services_post_processor, services_pre_processor};
+use blueprint_sdk::crypto::k256::K256VerifyingKey;
+use blueprint_sdk::crypto::KeyEncoding;
+use blueprint_sdk::event_listeners::tangle::events::TangleEventListener;
+use blueprint_sdk::event_listeners::tangle::services::{
+    services_post_processor, services_pre_processor,
+};
+use blueprint_sdk::logging::info;
+use blueprint_sdk::macros::ext::contexts::tangle::TangleClientContext;
+use blueprint_sdk::networking::round_based_compat::NetworkDeliveryWrapper;
+use blueprint_sdk::tangle_subxt::tangle_testnet_runtime::api::services::events::JobCalled;
+use blueprint_sdk::*;
 use gadget_macros::ext::clients::GadgetServicesClient;
-use gadget_macros::ext::contexts::tangle::TangleClientContext;
-use gadget_macros::ext::tangle::tangle_subxt::tangle_testnet_runtime::api::services::events::JobCalled;
-use gadget_macros::job;
-use gadget_networking::round_based_compat::NetworkDeliveryWrapper;
-use sp_core::ecdsa::Public;
 use std::collections::BTreeMap;
 use wsts::v2::Party;
 
@@ -73,7 +75,7 @@ pub async fn keygen(t: u16, context: WstsContext) -> Result<Vec<u8>, Box<dyn std
     let (meta_hash, deterministic_hash) =
         crate::compute_execution_hashes(n, blueprint_id, call_id, KEYGEN_SALT);
 
-    gadget_logging::info!(
+    info!(
         "Starting WSTS Keygen for party {i}, n={n}, eid={}",
         hex::encode(deterministic_hash)
     );
@@ -87,7 +89,7 @@ pub async fn keygen(t: u16, context: WstsContext) -> Result<Vec<u8>, Box<dyn std
 
     let state = protocol(n as _, i as _, k as _, t as _, network).await?;
 
-    gadget_logging::info!(
+    info!(
         "Ending WSTS Keygen for party {i}, n={n}, eid={}",
         hex::encode(deterministic_hash)
     );
@@ -140,7 +142,8 @@ async fn protocol(
     let mut party = Party::new(party_id, our_key_ids, n, k, t, &mut rng);
     let state =
         keygen_state_machine::wsts_protocol(network, &mut party, n as usize, &mut rng).await?;
-    gadget_logging::info!(
+
+    info!(
         "Combined public key: {:?}",
         state.party.lock().as_ref().unwrap().group_key
     );

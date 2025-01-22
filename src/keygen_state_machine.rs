@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::keygen::KeygenError;
+use blueprint_sdk::logging::{info, trace};
 use frost_secp256k1_tr::VerifyingKey;
 use itertools::Itertools;
 use round_based::SinkExt;
@@ -99,7 +100,7 @@ where
         state.poly_commitments.insert(party_id, msg.poly_commitment);
     }
 
-    gadget_logging::trace!(
+    trace!(
         "Received shares: {:?}",
         state.shares.keys().collect::<Vec<_>>()
     );
@@ -119,6 +120,7 @@ where
             (key_id, key_shares.into_iter().collect())
         })
         .collect();
+
     let polys = state
         .poly_commitments
         .iter()
@@ -138,11 +140,12 @@ where
     let verifying_key = VerifyingKey::deserialize(&compressed_group_point.data).map_err(|e| {
         KeygenError::MpcError(format!("Failed to convert group key to VerifyingKey: {e}"))
     })?;
-    let public_key_frost_format = verifying_key.serialize().as_ref().to_vec();
+
+    let public_key_frost_format = verifying_key.serialize().expect("Failed to serialize key");
     state.public_key_frost_format = public_key_frost_format;
     state.party = Arc::new(parking_lot::Mutex::new(Some(party)));
 
-    gadget_logging::info!("Keygen finished computing secret");
+    info!("Keygen finished computing secret");
 
     Ok(state)
 }

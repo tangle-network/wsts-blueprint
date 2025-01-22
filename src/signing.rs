@@ -1,13 +1,17 @@
 use crate::context::WstsContext;
-use gadget_crypto::k256::K256VerifyingKey;
-use gadget_crypto::KeyEncoding;
-use gadget_event_listeners::tangle::events::TangleEventListener;
-use gadget_event_listeners::tangle::services::{services_post_processor, services_pre_processor};
+use blueprint_sdk::crypto::k256::K256VerifyingKey;
+use blueprint_sdk::crypto::KeyEncoding;
+use blueprint_sdk::event_listeners::tangle::events::TangleEventListener;
+use blueprint_sdk::event_listeners::tangle::services::{
+    services_post_processor, services_pre_processor,
+};
+use blueprint_sdk::logging::info;
+use blueprint_sdk::macros as gadget_macros;
+use blueprint_sdk::macros::ext::contexts::tangle::TangleClientContext;
+use blueprint_sdk::networking::round_based_compat::NetworkDeliveryWrapper;
+use blueprint_sdk::tangle_subxt::tangle_testnet_runtime::api::services::events::JobCalled;
+use blueprint_sdk::*;
 use gadget_macros::ext::clients::GadgetServicesClient;
-use gadget_macros::ext::contexts::tangle::TangleClientContext;
-use gadget_macros::ext::tangle::tangle_subxt::tangle_testnet_runtime::api::services::events::JobCalled;
-use gadget_macros::job;
-use gadget_networking::round_based_compat::NetworkDeliveryWrapper;
 use std::collections::BTreeMap;
 
 /// Configuration constants for the WSTS signing process
@@ -84,7 +88,7 @@ pub async fn sign(
         .get(&store_key)
         .ok_or_else(|| SigningError::ContextError("Key entry not found".to_string()))?;
 
-    gadget_logging::info!(
+    info!(
         "Starting WSTS Signing for party {i}, n={n}, eid={}",
         hex::encode(deterministic_hash)
     );
