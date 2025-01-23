@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod e2e {
     use blueprint_sdk::logging::setup_log;
-    use blueprint_sdk::testing::tangle::{InputValue, TangleTestHarness};
+    use blueprint_sdk::testing::utils::tangle::{InputValue, TangleTestHarness};
     use blueprint_sdk::testing::tempfile;
     use blueprint_sdk::testing::utils::harness::TestHarness;
     use blueprint_sdk::testing::utils::runner::TestEnv;

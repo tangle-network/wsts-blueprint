@@ -6,11 +6,10 @@ use blueprint_sdk::event_listeners::tangle::services::{
     services_post_processor, services_pre_processor,
 };
 use blueprint_sdk::logging::info;
-use blueprint_sdk::macros as gadget_macros;
 use blueprint_sdk::macros::ext::contexts::tangle::TangleClientContext;
 use blueprint_sdk::networking::round_based_compat::NetworkDeliveryWrapper;
 use blueprint_sdk::tangle_subxt::tangle_testnet_runtime::api::services::events::JobCalled;
-use blueprint_sdk::*;
+use blueprint_sdk::{job, macros as gadget_macros};
 use gadget_macros::ext::clients::GadgetServicesClient;
 use std::collections::BTreeMap;
 

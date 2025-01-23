@@ -1,6 +1,5 @@
 use crate::keygen_state_machine::WstsState;
 use blueprint_sdk::config::StdGadgetConfiguration;
-use blueprint_sdk::macros as gadget_macros;
 use blueprint_sdk::macros::contexts::{
     KeystoreContext, P2pContext, ServicesContext, TangleClientContext,
 };

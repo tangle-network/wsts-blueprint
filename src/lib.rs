@@ -3,7 +3,7 @@ pub mod keygen;
 pub(crate) mod keygen_state_machine;
 pub mod signing;
 pub(crate) mod signing_state_machine;
-pub(crate) mod utils;
+pub mod utils;
 
 pub use blueprint_sdk::*;
 
