@@ -10,8 +10,8 @@ master_revision = "Latest"
 
 [dependencies]
 # Gadget dependencies
-blueprint-sdk = { git = "https://github.com/tangle-network/gadget-workspace/", branch = "serial/sdk", features = ["tangle", "p2p", "local-store", "macros", "networking", "round-based-compat"] }
-gadget-macros = { git = "https://github.com/tangle-network/gadget-workspace/", branch = "serial/sdk" }
+blueprint-sdk = { git = "https://github.com/tangle-network/gadget-workspace/", features = ["tangle", "local-store", "macros", "networking", "round-based-compat"] }
+gadget-macros = { git = "https://github.com/tangle-network/gadget-workspace/" }
 color-eyre = { version = "0.6", features = ["tracing-error", "color-spantrace"] }
 hex = { version = "0.4.3", default-features = false }
 k256 = { version = "0.13.3", default-features = false }
@@ -28,10 +28,10 @@ frost-secp256k1-tr = { git = "https://github.com/webb-tools/tangle.git", branch 
 wsts = "3.0.0"
 
 [build-dependencies]
-blueprint-sdk = { git = "https://github.com/tangle-network/gadget-workspace/", branch = "serial/sdk",  features = ["build"] }
+blueprint-sdk = { git = "https://github.com/tangle-network/gadget-workspace/",   features = ["build"] }
 
 [dev-dependencies]
-blueprint-sdk = { git = "https://github.com/tangle-network/gadget-workspace/", branch = "serial/sdk", features = ["testing"] }
+blueprint-sdk = { git = "https://github.com/tangle-network/gadget-workspace/",  features = ["testing"] }
 
 [features]
 default = ["std"]
