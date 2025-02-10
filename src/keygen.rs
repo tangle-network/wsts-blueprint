@@ -1,18 +1,18 @@
 use crate::keygen_state_machine;
 use crate::utils::validate_parameters;
 use crate::{context::WstsContext, keygen_state_machine::WstsState};
-use gadget_sdk::contexts::MPCContext;
-use gadget_sdk::{
-    event_listener::tangle::{
-        jobs::{services_post_processor, services_pre_processor},
-        TangleEventListener,
-    },
-    job,
-    network::round_based_compat::NetworkDeliveryWrapper,
-    tangle_subxt::tangle_testnet_runtime::api::services::events::JobCalled,
-    Error as GadgetError,
+use blueprint_sdk::crypto::k256::K256VerifyingKey;
+use blueprint_sdk::crypto::KeyEncoding;
+use blueprint_sdk::event_listeners::tangle::events::TangleEventListener;
+use blueprint_sdk::event_listeners::tangle::services::{
+    services_post_processor, services_pre_processor,
 };
-use sp_core::ecdsa::Public;
+use blueprint_sdk::job;
+use blueprint_sdk::logging::info;
+use blueprint_sdk::macros::ext::contexts::tangle::TangleClientContext;
+use blueprint_sdk::networking::round_based_compat::NetworkDeliveryWrapper;
+use blueprint_sdk::tangle_subxt::tangle_testnet_runtime::api::services::events::JobCalled;
+use gadget_macros::ext::clients::GadgetServicesClient;
 use std::collections::BTreeMap;
 use wsts::v2::Party;
 
@@ -40,26 +40,32 @@ use wsts::v2::Party;
 /// - Failed to get party information
 /// - MPC protocol execution failed
 /// - Serialization of results failed
-pub async fn keygen(t: u16, context: WstsContext) -> Result<Vec<u8>, GadgetError> {
+pub async fn keygen(t: u16, context: WstsContext) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     // Get configuration and compute deterministic values
-    let blueprint_id = context
+    let client = context.tangle_client().await?;
+    let blueprint_id = client
         .blueprint_id()
-        .map_err(|e| KeygenError::ContextError(e.to_string()))?;
-    let call_id = context
-        .current_call_id()
         .await
         .map_err(|e| KeygenError::ContextError(e.to_string()))?;
+    let call_id = context
+        .call_id
+        .ok_or_else(|| KeygenError::ContextError("Call_id not set".into()))?;
 
     // Setup party information
-    let (i, operators) = context
+    let (i, operators) = client
         .get_party_index_and_operators()
         .await
         .map_err(|e| KeygenError::ContextError(e.to_string()))?;
 
-    let parties: BTreeMap<u16, Public> = operators
+    let parties: BTreeMap<u16, _> = operators
         .into_iter()
         .enumerate()
-        .map(|(j, (_, ecdsa))| (j as u16, ecdsa))
+        .map(|(j, (_, ecdsa))| {
+            (
+                j as u16,
+                K256VerifyingKey::from_bytes(&ecdsa.0).expect("33 byte compressed ECDSA key"),
+            )
+        })
         .collect();
 
     let n = parties.len() as u16;
@@ -67,9 +73,9 @@ pub async fn keygen(t: u16, context: WstsContext) -> Result<Vec<u8>, GadgetError
     let k = n;
 
     let (meta_hash, deterministic_hash) =
-        crate::compute_deterministic_hashes(n, blueprint_id, call_id, KEYGEN_SALT);
+        crate::compute_execution_hashes(n, blueprint_id, call_id, KEYGEN_SALT);
 
-    gadget_sdk::info!(
+    info!(
         "Starting WSTS Keygen for party {i}, n={n}, eid={}",
         hex::encode(deterministic_hash)
     );
@@ -83,7 +89,7 @@ pub async fn keygen(t: u16, context: WstsContext) -> Result<Vec<u8>, GadgetError
 
     let state = protocol(n as _, i as _, k as _, t as _, network).await?;
 
-    gadget_sdk::info!(
+    info!(
         "Ending WSTS Keygen for party {i}, n={n}, eid={}",
         hex::encode(deterministic_hash)
     );
@@ -113,12 +119,9 @@ pub enum KeygenError {
 
     #[error("Delivery error: {0}")]
     DeliveryError(String),
-}
 
-impl From<KeygenError> for GadgetError {
-    fn from(err: KeygenError) -> Self {
-        GadgetError::Other(err.to_string())
-    }
+    #[error("Setup error: {0}")]
+    SetupError(String),
 }
 
 async fn protocol(
@@ -127,7 +130,7 @@ async fn protocol(
     k: u32,
     t: u32,
     network: NetworkDeliveryWrapper<keygen_state_machine::Msg>,
-) -> Result<WstsState, GadgetError> {
+) -> Result<WstsState, KeygenError> {
     validate_parameters(n, k, t)?;
     let mut rng = rand::rngs::OsRng;
     let key_ids = crate::utils::generate_party_key_ids(n, k);
@@ -138,9 +141,9 @@ async fn protocol(
     let network = round_based::party::MpcParty::connected(network);
     let mut party = Party::new(party_id, our_key_ids, n, k, t, &mut rng);
     let state =
-        crate::keygen_state_machine::wsts_protocol(network, &mut party, n as usize, &mut rng)
-            .await?;
-    gadget_sdk::info!(
+        keygen_state_machine::wsts_protocol(network, &mut party, n as usize, &mut rng).await?;
+
+    info!(
         "Combined public key: {:?}",
         state.party.lock().as_ref().unwrap().group_key
     );

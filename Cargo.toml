@@ -6,37 +6,32 @@ edition = "2021"
 
 [package.metadata.blueprint]
 manager = { Evm = "WstsBlueprint" }
+master_revision = "Latest"
 
 [dependencies]
-gadget-sdk = { git = "https://github.com/tangle-network/gadget/", features = ["std"] }
-#gadget-sdk = { path = "../gadget/sdk", features = ["std"] }
+# Gadget dependencies
+blueprint-sdk = { git = "https://github.com/tangle-network/gadget-workspace/", features = ["tangle", "local-store", "macros", "networking", "round-based-compat"] }
+gadget-macros = { git = "https://github.com/tangle-network/gadget-workspace/" }
 color-eyre = { version = "0.6", features = ["tracing-error", "color-spantrace"] }
-tokio = { version = "1.40", default-features = false, features = ["full"] }
 hex = { version = "0.4.3", default-features = false }
 k256 = { version = "0.13.3", default-features = false }
-bincode = "1.3.3"
-sp-core = { version = "31.0.0", default-features = false }
-rand_chacha = "0.3.1"
-serde = { version = "1.0.214", features = ["derive"] }
-round-based = { version = "0.3.2", features = ["runtime-tokio"] }
-tracing-subscriber = "0.3.18"
+serde = { version = "1.0.214", features = ["derive", "rc"] }
+round-based = { version = "0.3.2", features = ["runtime-tokio", "derive", "round-based-derive"] }
 thiserror = "2.0.3"
 itertools = "0.13.0"
 rand = "0.8.5"
 parking_lot = { version = "0.12.3", features = ["serde"]}
-p256k1 = "5.4"
-frost-taproot = { git = "https://github.com/webb-tools/tangle.git", branch = "main", default-features = false}
+p256k1 = "^5"
+frost-secp256k1-tr = { git = "https://github.com/webb-tools/tangle.git", branch = "main", features = ["std"]}
 
 # MPC specific deps
 wsts = "3.0.0"
 
 [build-dependencies]
-blueprint-metadata = { git = "https://github.com/tangle-network/gadget/" }
-blueprint-build-utils = { git = "https://github.com/tangle-network/gadget/" }
+blueprint-sdk = { git = "https://github.com/tangle-network/gadget-workspace/",   features = ["build"] }
 
 [dev-dependencies]
-blueprint-test-utils = { git = "https://github.com/tangle-network/gadget/" }
-cargo-tangle = { git = "https://github.com/tangle-network/gadget/" }
+blueprint-sdk = { git = "https://github.com/tangle-network/gadget-workspace/",  features = ["testing"] }
 
 [features]
 default = ["std"]

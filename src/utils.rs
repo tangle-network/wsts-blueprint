@@ -1,21 +1,16 @@
-use gadget_sdk::Error;
-pub fn validate_parameters(n: u32, k: u32, t: u32) -> Result<(), Error> {
+use crate::keygen::KeygenError;
+
+pub fn validate_parameters(n: u32, k: u32, t: u32) -> Result<(), KeygenError> {
     if k % n != 0 {
-        return Err(Error::Job {
-            reason: format!("K({k} % N({n} != 0"),
-        });
+        return Err(KeygenError::SetupError(format!("k({k}) % n({n}) != 0")));
     }
 
     if k == 0 {
-        return Err(Error::Job {
-            reason: "K == 0".to_string(),
-        });
+        return Err(KeygenError::SetupError(format!("k({k}) == 0")));
     }
 
     if n <= t {
-        return Err(Error::Job {
-            reason: "N <= T".to_string(),
-        });
+        return Err(KeygenError::SetupError(format!("n({n}) <= t({t})")));
     }
 
     Ok(())
