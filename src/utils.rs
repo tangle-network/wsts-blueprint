@@ -1,21 +1,14 @@
-use gadget_sdk::Error;
-pub fn validate_parameters(n: u32, k: u32, t: u32) -> Result<(), Error> {
+pub fn validate_parameters(n: u32, k: u32, t: u32) -> Result<(), String> {
     if k % n != 0 {
-        return Err(Error::Job {
-            reason: "K % N != 0".to_string(),
-        });
+        return Err("K % N != 0".to_string());
     }
 
     if k == 0 {
-        return Err(Error::Job {
-            reason: "K == 0".to_string(),
-        });
+        return Err("K == 0".to_string());
     }
 
     if n <= t {
-        return Err(Error::Job {
-            reason: "N <= T".to_string(),
-        });
+        return Err("N <= T".to_string());
     }
 
     Ok(())

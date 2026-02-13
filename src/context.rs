@@ -1,58 +1,80 @@
-use color_eyre::eyre;
-use gadget_sdk as sdk;
-use gadget_sdk::ext::subxt::tx::Signer;
-use gadget_sdk::network::NetworkMultiplexer;
-use gadget_sdk::store::LocalDatabase;
-use gadget_sdk::subxt_core::ext::sp_core::ecdsa;
-use sdk::contexts::{KeystoreContext, MPCContext, ServicesContext, TangleClientContext};
+use blueprint_sdk::clients::BlueprintServicesClient;
+use blueprint_sdk::contexts::tangle::TangleClientContext;
+use blueprint_sdk::crypto::k256::K256Ecdsa;
+use blueprint_sdk::networking::service_handle::NetworkServiceHandle;
+use blueprint_sdk::runner::config::BlueprintEnvironment;
+use blueprint_sdk::stores::local_database::LocalDatabase;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use crate::keygen_state_machine::WstsState;
 
 /// The network protocol version for the WSTS service
-const NETWORK_PROTOCOL: &str = "/wsts/frost/1.0.0";
+pub(crate) const NETWORK_PROTOCOL: &str = "wsts/frost/1.0.0";
 
-/// WSTS Service Context that holds all the necessary context for the service
-/// to run. This structure implements various traits for keystore, client, and service
-/// functionality.
-#[derive(Clone, KeystoreContext, TangleClientContext, ServicesContext, MPCContext)]
-pub struct WstsContext {
-    #[config]
-    pub config: sdk::config::StdGadgetConfiguration,
-    #[call_id]
-    pub call_id: Option<u64>,
-    pub network_backend: Arc<NetworkMultiplexer>,
-    pub store: Arc<LocalDatabase<WstsState>>,
-    pub identity: ecdsa::Pair,
+/// Global WSTS context, initialized once at startup.
+static WSTS_CTX: OnceLock<WstsContext> = OnceLock::new();
+
+/// Get the global WSTS context. Panics if not initialized.
+pub fn wsts_ctx() -> &'static WstsContext {
+    WSTS_CTX.get().expect("WstsContext not initialized")
 }
 
-// Core context management implementation
+/// WSTS Service Context
+#[derive(Clone)]
+pub struct WstsContext {
+    pub env: BlueprintEnvironment,
+    pub network_backend: NetworkServiceHandle<K256Ecdsa>,
+    pub store: Arc<LocalDatabase<WstsState>>,
+}
+
 impl WstsContext {
-    /// Creates a new service context with the provided configuration
-    ///
-    /// # Errors
-    /// Returns an error if:
-    /// - Network initialization fails
-    /// - Configuration is invalid
-    pub fn new(config: sdk::config::StdGadgetConfiguration) -> eyre::Result<Self> {
-        let network_config = config
-            .libp2p_network_config(NETWORK_PROTOCOL)
-            .map_err(|err| eyre::eyre!("Failed to create network configuration: {err}"))?;
+    /// Creates and globally initializes the WSTS context.
+    pub async fn init(env: &BlueprintEnvironment) -> Result<(), String> {
+        let tangle_client = env.tangle_client().await.map_err(|e| e.to_string())?;
 
-        let identity = network_config.ecdsa_key.clone();
-        let gossip_handle = sdk::network::setup::start_p2p_network(network_config)
-            .map_err(|err| eyre::eyre!("Failed to start the P2P network: {err}"))?;
+        let operators = tangle_client
+            .get_operators()
+            .await
+            .map_err(|e| e.to_string())?;
 
-        let keystore_dir = PathBuf::from(config.keystore_uri.clone()).join("wsts.json");
-        let store = Arc::new(LocalDatabase::open(keystore_dir));
+        let operator_keys =
+            blueprint_sdk::networking::service::AllowedKeys::<K256Ecdsa>::EvmAddresses(
+                operators.keys().cloned().collect(),
+            );
 
-        Ok(Self {
+        let (_allowed_keys_tx, allowed_keys_rx) = crossbeam_channel::unbounded();
+
+        let network_config = env
+            .libp2p_network_config::<K256Ecdsa>(NETWORK_PROTOCOL, false)
+            .map_err(|e| e.to_string())?;
+
+        let network_backend = env
+            .libp2p_start_network(network_config, operator_keys, allowed_keys_rx)
+            .map_err(|e| e.to_string())?;
+
+        let keystore_dir = PathBuf::from(&env.keystore_uri).join("wsts.json");
+        let store = Arc::new(
+            LocalDatabase::open(keystore_dir).map_err(|e| format!("Failed to open store: {e}"))?,
+        );
+
+        let ctx = WstsContext {
+            env: env.clone(),
+            network_backend,
             store,
-            call_id: None,
-            identity,
-            config,
-            network_backend: Arc::new(NetworkMultiplexer::new(gossip_handle)),
-        })
+        };
+
+        WSTS_CTX
+            .set(ctx)
+            .map_err(|_| "WstsContext already initialized".to_string())
+    }
+
+    /// Returns the blueprint ID
+    pub fn blueprint_id(&self) -> Result<u64, String> {
+        self.env
+            .protocol_settings
+            .tangle()
+            .map(|c| c.blueprint_id)
+            .map_err(|err| format!("Blueprint ID not found: {err}"))
     }
 }
