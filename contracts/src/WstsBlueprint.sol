@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSE
-pragma solidity >=0.8.13;
+pragma solidity ^0.8.26;
 
-import "dependencies/tnt-core-0.1.0/src/BlueprintServiceManagerBase.sol";
+import "tnt-core/src/BlueprintServiceManagerBase.sol";
 
 /**
  * @title WstsBlueprint
- * @dev This contract is an example of a service blueprint that provides a single service.
+ * @dev This contract is a service blueprint for WSTS threshold signing.
  * @dev For all supported hooks, check the `BlueprintServiceManagerBase` contract.
  */
 contract WstsBlueprint is BlueprintServiceManagerBase {}
