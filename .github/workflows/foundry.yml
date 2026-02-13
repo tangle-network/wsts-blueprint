@@ -1,6 +1,15 @@
 name: Foundry CI
 
-on: workflow_dispatch
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: forge-validation-${{ github.head_ref }}
+  cancel-in-progress: true
 
 jobs:
   foundry-check:
@@ -21,13 +30,16 @@ jobs:
         with:
           version: stable
 
+      - name: Install Solidity Dependencies
+        run: forge soldeer update -d
+
       - name: Run Forge build
         run: |
           forge --version
-          forge build --sizes
+          forge build --sizes --color always
         id: build
 
       - name: Run Forge tests
         run: |
-          forge test -vvv
+          forge test -vvv --color always
         id: test
