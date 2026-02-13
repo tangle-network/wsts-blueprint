@@ -2,9 +2,6 @@ name: Foundry CI
 
 on: workflow_dispatch
 
-env:
-  FOUNDRY_PROFILE: ci
-
 jobs:
   foundry-check:
     strategy:
@@ -22,7 +19,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: stable
 
       - name: Run Forge build
         run: |
