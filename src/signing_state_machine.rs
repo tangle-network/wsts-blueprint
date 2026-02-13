@@ -9,10 +9,10 @@ use std::sync::Arc;
 use crate::keygen_state_machine::{HasRecipient, WstsState};
 use crate::signing::SigningError;
 use frost_secp256k1_tr::VerifyingKey;
+use futures::SinkExt;
 use itertools::Itertools;
 use p256k1::point::Point;
 use p256k1::scalar::Scalar;
-use futures::SinkExt;
 use serde::{Deserialize, Serialize};
 use wsts::common::Signature;
 use wsts::v2::Party;
@@ -260,13 +260,11 @@ where
 
     state.signature_frost_format = signature_bytes.to_vec();
 
-    let frost_signature =
-        frost_secp256k1_tr::Signature::deserialize(&signature_bytes)
-            .map_err(|_| SigningError::InvalidFrostSignature)?;
+    let frost_signature = frost_secp256k1_tr::Signature::deserialize(&signature_bytes)
+        .map_err(|_| SigningError::InvalidFrostSignature)?;
 
-    let frost_verifying_key =
-        VerifyingKey::deserialize(&state.public_key_frost_format)
-            .map_err(|_| SigningError::InvalidFrostVerifyingKey)?;
+    let frost_verifying_key = VerifyingKey::deserialize(&state.public_key_frost_format)
+        .map_err(|_| SigningError::InvalidFrostVerifyingKey)?;
 
     frost_verifying_key
         .verify(&message, &frost_signature)

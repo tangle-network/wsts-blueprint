@@ -87,13 +87,12 @@ pub async fn sign(
         hex::encode(deterministic_hash)
     );
 
-    let network =
-        RoundBasedNetworkAdapter::<crate::signing_state_machine::Msg, K256Ecdsa>::new(
-            ctx.network_backend.clone(),
-            i,
-            &parties,
-            crate::context::NETWORK_PROTOCOL,
-        );
+    let network = RoundBasedNetworkAdapter::<crate::signing_state_machine::Msg, K256Ecdsa>::new(
+        ctx.network_backend.clone(),
+        i,
+        &parties,
+        crate::context::NETWORK_PROTOCOL,
+    );
 
     let mut rng = rand::rngs::OsRng;
     let network = round_based::party::MpcParty::connected(network);

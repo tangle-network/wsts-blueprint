@@ -1,5 +1,5 @@
 pub fn validate_parameters(n: u32, k: u32, t: u32) -> Result<(), String> {
-    if k % n != 0 {
+    if !k.is_multiple_of(n) {
         return Err("K % N != 0".to_string());
     }
 

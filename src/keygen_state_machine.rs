@@ -8,8 +8,8 @@ use std::collections::HashMap;
 
 use crate::keygen::KeygenError;
 use frost_secp256k1_tr::VerifyingKey;
-use itertools::Itertools;
 use futures::SinkExt;
+use itertools::Itertools;
 use std::sync::Arc;
 use wsts::common::PolyCommitment;
 use wsts::v2::{Party, PartyState};
