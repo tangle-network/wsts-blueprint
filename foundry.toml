@@ -10,6 +10,9 @@ auto_detect_remappings = true
 
 [dependencies]
 forge-std = "1.9.4"
-tnt-core = "0.1.0"
+tnt-core = "0.13.0"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+
+[soldeer]
+recursive_deps = true
